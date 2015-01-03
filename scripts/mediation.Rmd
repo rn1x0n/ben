@@ -1,0 +1,84 @@
+---
+title: "Mediation"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+- Report generated `r date()`
+
+```{r echo = FALSE}
+source(file.path("..", "_setup.R"))
+opts_chunk$set(warning = FALSE, error = FALSE, message = FALSE, echo = FALSE)
+fig.width1 <- 4
+fig.height1 <- 4
+
+data <- dget(file.path(gv$data, 'data.dput'))
+labels <- attr(data, "labels")
+var.ivt <- c("Don.t.bypass.boss.upward", "Presumed.Target.Identification", "Don.t.embarass.boss.publicly", "Negative.career.consequences.of.voice")
+var.key <- c("Power.Distance", "Resistance.to.change", "Openess.to.change")
+var.dem <- c("Age", "Gender", "Level.of.education",                      
+                      "Manager", "Duration.current.organisation")
+var.cou <- c("Num.countries.12.months",
+             "Countries.Asia", "Countries.Europe.Australia" , "Countries.Latin.America",  "Countries.North.America", "Countries.Africa")
+```
+
+# Assess mediators of Constructive Voice Behavior
+
+## Assess IVT variables as mediators for effect of key variables on Constructive Voice Behavior
+
+Need to pass three tests:
+
+1. Test "independent" is significant in model 1: dependent ~ independent (+ covar)
+2. Test "independent" is significant in model 2:  mediator ~ independent (+ covar)
+3. Test "mediator" is significant in model 3:  dependent ~ independent + mediator (+ covar)
+
+In addition, if all three tests are passed,  can test of complete or partial mediation by test "independent" is significant in model 3:  dependent ~ independent + mediator (+ covar).
+
+
+```{r IVT as mediators, results = "asis"}
+for(independent in var.key){
+  for(mediator in var.ivt){
+    
+     cat(paste0("<br>Testing IVT variable: <b>", labels[mediator], 
+                "</b><br>as a mediator for effect of<br><b>",
+                labels[independent], "</b> on Constructive Voice Behavior<br>"))
+ 
+    results <- test.med(
+  dependent = "Constructive.Voice.Behavior",
+  independent = independent,
+  mediator = mediator,
+  covar = NULL, #var.dem, # Other covariates to include in the model
+  data = data
+)
+
+print.test.med(results)
+  }
+}
+
+```
+
+## Assess key variables as mediators for effect of IVT variables on Constructive Voice Behavior
+
+```{r key as mediators, results = "asis"}
+for(independent in var.ivt){
+  for(mediator in var.key){
+    
+     cat(paste0("<br>Testing key variable: <b>", labels[mediator], 
+                "</b><br>as a mediator for effect of<br><b>",
+                labels[independent], "</b> on Constructive Voice Behavior<br>"))
+ 
+    results <- test.med(
+  dependent = "Constructive.Voice.Behavior",
+  independent = independent,
+  mediator = mediator,
+  covar = NULL, #var.dem, # Other covariates to include in the model
+  data = data
+)
+
+print.test.med(results)
+  }
+}
+
+```

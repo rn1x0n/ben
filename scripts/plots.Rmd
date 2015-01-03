@@ -1,0 +1,189 @@
+---
+title: "Exploratory plots"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+- Report generated `r date()`
+
+```{r echo = FALSE}
+source(file.path("..", "_setup.R"))
+opts_chunk$set(warning = FALSE, error = FALSE, message = FALSE, echo = FALSE)
+
+data <- dget(file.path(gv$data, 'data.dput'))
+labels <- attr(data, "labels")
+var.ivt <- names(data)[2:5]
+var.key <- c("Power.Distance", "Resistance.to.change", "Openess.to.change")
+var.dem <- c("Age", "Gender", "Level.of.education",                      
+                      "Manager", "Duration.current.organisation")
+var.cou <- c("Num.countries.12.months",
+             "Countries.Asia", "Countries.Europe.Australia" , "Countries.Latin.America",  "Countries.North.America", "Countries.Africa")
+```
+
+# Relationship with IVT variables with other variables
+
+```{r}
+# Which variables are independent, dependent and effect modifiers
+var.indep <- names(data)[2:5]
+var.dep <- names(data)[6:11]
+var.mod <- names(data)[12:23]
+
+# Makea long dataset, with indep and dep variables values as colums
+long.indep <- melt(data, id.vars = "ResponseID", measure.vars = var.indep, variable.name = "var.indep", value.name = "value.indep")
+long.dep <- melt(data, id.vars = "ResponseID", measure.vars = var.dep, variable.name = "var.dep", value.name = "value.dep")
+
+long <- merge(long.indep, long.dep, by = "ResponseID")
+long <- merge(long, data[, c("ResponseID", var.mod)], by = "ResponseID")
+
+long$var.indep <- labels[as.character(long$var.indep)]
+long$var.dep <- labels[as.character(long$var.dep)]
+
+long$var.indep <- factor(long$var.indep, levels = labels[var.indep])
+long$var.dep <- factor(long$var.dep, levels = labels[var.dep])
+
+```
+
+## Plot of the IVT variables against other variables
+```{r, fig.width = 10, fig.height = 10}
+p <- ggplot(long, aes(x = value.indep, y = value.dep)) +
+  facet_grid(var.dep ~ var.indep, scale = "free") +
+  geom_point() +
+  geom_smooth() +
+  xlab("Score") + ylab("Score")
+
+print(p)
+```
+
+## Correlation of IVT with other variables
+```{r corr_table, results = "asis"}
+digits <- 2
+
+corr <- ddply(long, .(var.indep, var.dep), function(x){
+  test <- cor.test(x$value.indep, x$value.dep)
+  data.frame(
+    corr = test$estimate,
+    p.value = test$p.value,
+    low = test$conf.int[1],
+    upp = test$conf.int[2]
+    )
+})
+
+corr <- melt(corr, measure.vars = c("corr", "p.value", "low", "upp"))
+corr$value <- format(corr$value, digits = digits)
+
+corr.CI <- ddply(corr, .(var.indep, var.dep), function(x){
+  data.frame(variable = "CI",
+             value = paste0('(', subset(x, variable == "low")$value, ', ', subset(x, variable == "upp")$value, ')'))
+})
+
+corr <- rbind(subset(corr, variable %in% c("corr", "p.value")), corr.CI)
+corr <- dcast(corr, var.indep + variable ~ var.dep)
+
+print(xtable(corr, align = c("l", "l", rep("r", ncol(corr)-1))),
+      type = "html",
+      include.rownames = FALSE
+)
+
+```
+
+# Relationship of variables with Constructive Voice Behavior
+## Plots of Constructive Voice Behavior
+### Hisogram of Constructive Voice Behavior
+
+```{r}
+ggplot(data, aes(x = Constructive.Voice.Behavior)) +
+  geom_histogram() +
+  xlab(labels["Constructive.Voice.Behavior"])
+```
+
+### Density of Constructive Voice Behavior
+
+```{r}
+ggplot(data, aes(x = Constructive.Voice.Behavior)) +
+  geom_density() +
+  xlab(labels["Constructive.Voice.Behavior"])
+```
+
+## Plots of IVT and Constructive Voice Behavior
+
+```{r IVT vs Constructive.Voice.Behavior, fig.width = 5, fig.height = 8}
+long.ivt <- melt(data, 
+                   id.vars = c("ResponseID", "Constructive.Voice.Behavior"), 
+                   measure.vars = var.ivt, 
+                   variable.name = "var.ivt", value.name = "IVT")
+
+long.ivt$var.ivt <- labels[as.character(long.ivt$var.ivt)]
+long.ivt$var.ivt <- factor(long.ivt$var.ivt, levels = labels[var.ivt])
+
+ggplot(long.ivt, aes(x = IVT, y = Constructive.Voice.Behavior)) +
+  facet_wrap(~ var.ivt, ncol = 1) +
+  geom_point() +
+   geom_smooth() +
+ylab(labels["Constructive.Voice.Behavior"]) + xlab("")
+```
+
+## Plots of key variables and Constructive Voice Behavior
+
+```{r key vs Constructive.Voice.Behavior, fig.width = 6, fig.height = 6}
+long.key <- melt(data, 
+                   id.vars = c("ResponseID", "Constructive.Voice.Behavior"), 
+                   measure.vars = var.key, 
+                   variable.name = "var.key", value.name = "key")
+
+long.key$var.key <- labels[as.character(long.key$var.key)]
+long.key$var.key <- factor(long.key$var.key, levels = labels[var.key])
+
+ggplot(long.key, aes(x = key, y = Constructive.Voice.Behavior)) +
+  facet_wrap(~ var.key, ncol = 1) +
+  geom_point() +
+   geom_smooth() +
+ylab(labels["Constructive.Voice.Behavior"]) + xlab("")
+```
+
+## Plots of demographic variables and Constructive Voice Behavior
+
+```{r Demo vs Constructive.Voice.Behavior, fig.width = 6, fig.height = 8}
+long.dem <- melt(data, 
+                   id.vars = c("ResponseID", "Constructive.Voice.Behavior"), 
+                   measure.vars = var.dem, 
+                   variable.name = "var.dem", value.name = "dem")
+
+long.dem$var.dem <- labels[as.character(long.dem$var.dem)]
+long.dem$var.dem <- factor(long.dem$var.dem, levels = labels[var.dem])
+
+ggplot(long.dem, aes(x = as.factor(dem), y = Constructive.Voice.Behavior)) +
+  facet_wrap(~ var.dem, ncol = 1) +
+  geom_violin() + 
+    geom_point(position = position_jitter(w = 0.2, h = 0)) +
+ylab(labels["Constructive.Voice.Behavior"]) + xlab("")
+
+```
+
+## Violin plots of country variables and Constructive Voice Behavior
+
+```{r Num country vs Constructive.Voice.Behavior, fig.width = 6, fig.height = 4}
+ggplot(data, aes(x = as.factor(Num.countries.12.months), y = Constructive.Voice.Behavior)) +
+  geom_violin() + 
+  geom_point(position = position_jitter(w = 0.2, h = 0)) +
+ylab(labels["Constructive.Voice.Behavior"]) + xlab(labels["Num.countries.12.months"])
+```
+
+```{r Counties vs Constructive.Voice.Behavior, fig.width = 6, fig.height = 8}
+var.cou0 <- var.cou[-1]
+long.cou <- melt(data, 
+                   id.vars = c("ResponseID", "Constructive.Voice.Behavior"), 
+                   measure.vars = var.cou0, 
+                   variable.name = "var.cou", value.name = "cou")
+
+long.cou$var.cou <- labels[as.character(long.cou$var.cou)]
+long.cou$var.cou <- factor(long.cou$var.cou, levels = labels[var.cou])
+
+ggplot(long.cou, aes(x = as.factor(cou), y = Constructive.Voice.Behavior)) +
+  facet_wrap(~ var.cou, ncol = 1) +
+  geom_violin() + 
+  geom_point(position = position_jitter(w = 0.2, h = 0)) +
+ylab(labels["Constructive.Voice.Behavior"]) + xlab("")
+
+```

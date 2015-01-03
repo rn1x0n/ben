@@ -1,0 +1,322 @@
+---
+title: "Analysis"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+- Report generated `r date()`
+
+```{r echo = FALSE}
+source(file.path("..", "_setup.R"))
+opts_chunk$set(warning = FALSE, error = FALSE, message = FALSE, echo = FALSE)
+fig.width1 <- 4
+fig.height1 <- 4
+
+data <- dget(file.path(gv$data, 'data.dput'))
+labels <- attr(data, "labels")
+var.ivt <- c("Don.t.bypass.boss.upward", "Presumed.Target.Identification", "Don.t.embarass.boss.publicly", "Negative.career.consequences.of.voice")
+var.key <- c("Power.Distance", "Resistance.to.change", "Openess.to.change")
+var.dem <- c("Age", "Gender", "Level.of.education",                      
+                      "Manager", "Duration.current.organisation")
+var.cou <- c("Num.countries.12.months",
+             "Countries.Asia", "Countries.Europe.Australia" , "Countries.Latin.America",  "Countries.North.America", "Countries.Africa")
+
+ggplotRegression <- function (mod) {
+ggplot(mod$model, aes_string(x = names(mod$model)[2], y = names(mod$model)[1])) + 
+  geom_point() +
+  stat_smooth(method = "lm", col = "red") +
+  xlab(labels[names(mod$model)[2]]) + ylab(labels[names(mod$model)[1]])
+}
+```
+
+# Linear models for Constructive Voice Behavior
+## Univariate regression
+### IVT univariate regression
+
+```{r IVT univariate regression, results = "asis"}
+mod <- list()
+for(i in 1:length(var.ivt)){
+  formula <- as.formula(paste("Constructive.Voice.Behavior ~ ", var.ivt[i]))
+  mod[[var.ivt[i]]] <- lm(formula, data = data)
+  
+  print(xtable(summary(mod[[var.ivt[i]]])),
+      type = "html")
+  
+  cat("<br>")
+}
+
+```
+
+```{r, fig.width = fig.width1, fig.height = fig.height1}
+for(i in 1:length(mod)){
+print(ggplotRegression(mod[[i]]))
+}
+```
+
+### Key variables univariate regression
+
+```{r key univariate regression, results = "asis"}
+mod <- list()
+for(i in 1:length(var.key)){
+  formula <- as.formula(paste("Constructive.Voice.Behavior ~ ", var.key[i]))
+  mod[[var.key[i]]] <- lm(formula, data = data)
+  
+  print(xtable(summary(mod[[var.key[i]]])),
+      type = "html")
+  
+  cat("<br>")
+}
+
+```
+
+```{r, fig.width = fig.width1, fig.height = fig.height1}
+for(i in 1:length(mod)){
+print(ggplotRegression(mod[[i]]))
+}
+```
+
+### Demographics univariate regression
+
+```{r demographics univariate regression, results = "asis"}
+mod <- list()
+for(i in 1:length(var.dem)){
+  formula <- as.formula(paste("Constructive.Voice.Behavior ~ ", var.dem[i]))
+  mod[[var.dem[i]]] <- lm(formula, data = data)
+  
+  print(xtable(summary(mod[[var.dem[i]]])),
+      type = "html")
+  
+  cat("<br>")
+}
+
+```
+
+```{r, fig.width = fig.width1, fig.height = fig.height1}
+for(i in 1:length(mod)){
+print(ggplotRegression(mod[[i]]))
+}
+```
+
+## Multivariate regression
+### IVT multivariate regression
+
+```{r IVT multivariate regression, results = "asis"}
+
+  formula <- as.formula(paste("Constructive.Voice.Behavior ~ ", 
+                              paste(var.ivt, collapse = " + ")))
+  mod <- lm(formula, data = data)
+  
+  print(xtable(summary(mod)),
+      type = "html")
+  
+  cat("<br>")
+
+```
+
+### Key variables multivariate regression
+
+```{r key multivariate regression, results = "asis"}
+
+  formula <- as.formula(paste("Constructive.Voice.Behavior ~ ", 
+                              paste(var.key, collapse = " + ")))
+  mod <- lm(formula, data = data)
+  
+  print(xtable(summary(mod)),
+      type = "html")
+  
+  cat("<br>")
+
+```
+
+### Demographics multivaraite regression
+```{r demo multivariate regression, results = "asis"}
+
+  formula <- as.formula(paste("Constructive.Voice.Behavior ~ ", 
+                              paste(var.dem, collapse = " + ")))
+  mod <- lm(formula, data = data)
+  
+  print(xtable(summary(mod)),
+      type = "html")
+  
+  cat("<br>")
+
+```
+
+## Adjustment for key and demographic varaibles
+### IVT with main effects for key and demographic varaibles
+
+Fit all as main effects and select with AIC algorithm. This finds a model that is a balance between simplicity and model fit. If the IVT variable is not in the final AIC model, then the other variables are associated with Constructive Voice Behavior, and any relationship with IVT is via other variables also being associated with IVT.
+
+```{r IVT univariate regression with main effects, results = "asis"}
+mod <- step.mod <- list()
+
+for(i in 1:length(var.ivt)){
+  formula <- as.formula(paste("Constructive.Voice.Behavior ~ ", var.ivt[i], 
+                              "+", paste(var.key, collapse = " + "),
+                              "+", paste(var.dem, collapse = " + ")
+                              ))
+  
+  mod[[var.ivt[i]]] <- lm(formula, data = data)
+  step.mod[[var.ivt[i]]] <- step(mod[[var.ivt[i]]], trace = 0)
+  
+  cat(paste0(labels[var.ivt[i]], ": Initial model\n"))
+  print(xtable(summary(mod[[var.ivt[i]]])),
+      type = "html")
+  
+  cat(paste0(labels[var.ivt[i]], ": Final AIC model\n"))
+  print(xtable(summary(step.mod[[var.ivt[i]]])),
+      type = "html")
+ 
+  cat("<br>")
+}
+
+```
+
+### IVT with main and interaction effects for key and demographic varaibles
+
+```{r IVT univariate regression with main and interaction effects, results = "asis"}
+mod <- step.mod <- list()
+
+for(i in 1:length(var.ivt)){
+  formula <- as.formula(paste("Constructive.Voice.Behavior ~ ", var.ivt[i], 
+                              "*(", paste(var.key, collapse = " + "),
+                              "+", paste(var.dem, collapse = " + "),
+                              ")"
+                              ))
+  
+  mod[[var.ivt[i]]] <- lm(formula, data = data)
+  step.mod[[var.ivt[i]]] <- step(mod[[var.ivt[i]]], trace = 0)
+  
+  cat(paste0(labels[var.ivt[i]], ": Initial model\n"))
+  print(xtable(summary(mod[[var.ivt[i]]])),
+      type = "html")
+  
+  cat(paste0(labels[var.ivt[i]], ": Final AIC model\n"))
+  print(xtable(summary(step.mod[[var.ivt[i]]])),
+      type = "html")
+ 
+  cat("<br>")
+}
+
+```
+
+### Key variables with main effects for IVT and demographic varaibles
+
+```{r Key univariate regression with main effects, results = "asis"}
+mod <- step.mod <- list()
+
+for(i in 1:length(var.key)){
+  formula <- as.formula(paste("Constructive.Voice.Behavior ~ ", var.key[i], 
+                              "+", paste(var.ivt, collapse = " + "),
+                              "+", paste(var.dem, collapse = " + ")
+                              ))
+  
+  mod[[var.key[i]]] <- lm(formula, data = data)
+  step.mod[[var.key[i]]] <- step(mod[[var.key[i]]], trace = 0)
+  
+  cat(paste0(labels[var.key[i]], ": Initial model\n"))
+  print(xtable(summary(mod[[var.key[i]]])),
+      type = "html")
+  
+  cat(paste0(labels[var.key[i]], ": Final AIC model\n"))
+  print(xtable(summary(step.mod[[var.key[i]]])),
+      type = "html")
+ 
+  cat("<br>")
+}
+
+```
+
+### Key variables with main and interaction effects for IVT and demographic varaibles
+
+```{r Key univariate regression with main and interaction effects, results = "asis"}
+mod <- step.mod <- list()
+
+for(i in 1:length(var.key)){
+  formula <- as.formula(paste("Constructive.Voice.Behavior ~ ", var.key[i], 
+                              "*(", paste(var.ivt, collapse = " + "),
+                              "+", paste(var.dem, collapse = " + "),
+                              ")"
+                              ))
+  
+  mod[[var.key[i]]] <- lm(formula, data = data)
+  step.mod[[var.key[i]]] <- step(mod[[var.key[i]]], trace = 0)
+  
+  cat(paste0(labels[var.key[i]], ": Initial model\n"))
+  print(xtable(summary(mod[[var.key[i]]])),
+      type = "html")
+  
+  cat(paste0(labels[var.key[i]], ": Final AIC model\n"))
+  print(xtable(summary(step.mod[[var.key[i]]])),
+      type = "html")
+ 
+  cat("<br>")
+}
+
+```
+
+
+# Linear models for IVT
+
+## IVT with main effects for Constructive Voice Behavior, key and demographic varaibles
+
+```{r model for IVT univariate regression with main effects, results = "asis"}
+mod <- step.mod <- list()
+
+for(i in 1:length(var.ivt)){
+  formula <- as.formula(paste(var.ivt[i], "~ Constructive.Voice.Behavior", 
+                              "+", paste(var.key, collapse = " + "),
+                              "+", paste(var.dem, collapse = " + ")
+                              ))
+  
+  mod[[var.ivt[i]]] <- lm(formula, data = data)
+  step.mod[[var.ivt[i]]] <- step(mod[[var.ivt[i]]], trace = 0)
+  
+  cat(paste0(labels[var.ivt[i]], ": Initial model\n"))
+  print(xtable(summary(mod[[var.ivt[i]]])),
+      type = "html")
+  
+  cat(paste0(labels[var.ivt[i]], ": Final AIC model\n"))
+  print(xtable(summary(step.mod[[var.ivt[i]]])),
+      type = "html")
+ 
+  cat("<br>")
+}
+
+```
+
+## IVT regression with main and interaction effects for Constructive Voice Behavior, key and demographic varaibles
+
+```{r model for IVT univariate regression with main and interaction effects, results = "asis"}
+mod <- step.mod <- list()
+
+for(i in 1:length(var.ivt)){
+  formula <- as.formula(paste(var.ivt[i], "~ ", 
+                              "(", "Constructive.Voice.Behavior +",
+                              paste(var.key, collapse = " + "),
+                              "+", paste(var.dem, collapse = " + "),
+                              ")^2"                              
+                              ))
+  
+  mod[[var.ivt[i]]] <- lm(formula, data = data)
+  step.mod[[var.ivt[i]]] <- try(step(mod[[var.ivt[i]]], trace = 0))
+  
+  cat(paste0(labels[var.ivt[i]], ": Initial model\n"))
+  print(xtable(summary(mod[[var.ivt[i]]])),
+      type = "html")
+  
+  cat(paste0(labels[var.ivt[i]], ": Final AIC model\n"))
+  if(class(step.mod[[var.ivt[i]]]) != "try-error"){
+  print(xtable(summary(step.mod[[var.ivt[i]]])),
+      type = "html")
+ } else {
+   cat("Error: Can't run AIC function<br>")
+   }
+ 
+  cat("<br>")
+}
+
+```
+

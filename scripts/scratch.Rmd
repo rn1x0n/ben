@@ -1,0 +1,60 @@
+---
+title: "Scratch"
+output: html_document
+---
+
+```{r echo = FALSE}
+source(file.path("..", "_setup.R"))
+opts_chunk$set(warning = FALSE, error = FALSE, message = FALSE, echo = FALSE)
+fig.width1 <- 4
+fig.height1 <- 4
+
+data <- dget(file.path(gv$data, 'data.dput'))
+labels <- attr(data, "labels")
+var.ivt <- c("Don.t.bypass.boss.upward", "Presumed.Target.Identification", "Don.t.embarass.boss.publicly", "Negative.career.consequences.of.voice")
+var.key <- c("Power.Distance", "Resistance.to.change", "Openess.to.change")
+var.dem <- c("Age", "Gender", "Level.of.education",                      
+                      "Manager", "Duration.current.organisation")
+var.cou <- c("Num.countries.12.months",
+             "Countries.Asia", "Countries.Europe.Australia" , "Countries.Latin.America",  "Countries.North.America", "Countries.Africa")
+```
+
+```{r}
+temp <- subset(data, select = c(
+Don.t.embarass.boss.publicly, 
+#Power.Distance,	
+Resistance.to.change,
+Constructive.Voice.Behavior))
+
+ggpairs(temp)
+mod <- lm(Constructive.Voice.Behavior ~ Don.t.embarass.boss.publicly+Resistance.to.change, data = data)
+summary(mod)
+
+mod1 <- lm(Constructive.Voice.Behavior ~ Don.t.embarass.boss.publicly, data = data)
+summary(mod1)
+p.mod1 <- ggplotRegression(mod1)
+
+mod2 <- lm(Constructive.Voice.Behavior ~ Resistance.to.change, data = data)
+summary(mod2)
+p.mod2 <- ggplotRegression(mod2)
+
+mod3 <- lm(Don.t.embarass.boss.publicly ~ Resistance.to.change, data = data)
+summary(mod3)
+p.mod3 <- ggplotRegression(mod3)
+
+multiplot(p.mod1, p.mod2, p.mod3)
+
+p1 <- ggplot(temp, aes(x = Don.t.embarass.boss.publicly, y = Constructive.Voice.Behavior)) +
+  geom_point(aes(size = Resistance.to.change))#, position = "jitter")
+
+p2 <- ggplot(temp, aes(x = Resistance.to.change, y = Constructive.Voice.Behavior)) +
+  geom_point(aes(size = Don.t.embarass.boss.publicly))#, position = "jitter")
+
+p3 <- ggplot(temp, aes(x = Resistance.to.change, y = Don.t.embarass.boss.publicly)) +
+  geom_point(aes(size = Constructive.Voice.Behavior))#, position = "jitter")
+
+multiplot(p1, p2, p3)
+
+
+```
+

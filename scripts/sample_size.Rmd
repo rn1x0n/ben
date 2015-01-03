@@ -1,0 +1,133 @@
+---
+title: "Implicit voice theories"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+---
+
+```{r global_options, include=FALSE}
+require(knitr) 
+opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
+```
+
+Document date: `r date()`
+
+## Data
+
+Variable                 | Description | Range
+-------------------------|-------------|------
+$\mathrm{IVT}_1$ ... $\mathrm{IVT}_4$      | 4 questions with 5 point Likert. Sum over questions each domain | 4 - 20, for each domain
+$\mathrm{PD}$ | Power distance. 5 questions with 5 point Likert. Sum over questions | 1 - 25
+$\mathrm{CV}$ | Collectivism. 6 questions with 5 point Likert. Sum over questions | 1 - 30
+
+## Model
+
+We wish to assess the correlation between the $\mathrm{IVT}$ variables and each of $\mathrm{PD}$  and $\mathrm{CV}$ 
+
+Fit series of linear regression models
+$$
+  \begin{aligned}
+  \mathrm{PD} & =  \alpha_1 + \beta_1 \mathrm{IVT}_1 \\
+  \mathrm{PD} & =  \alpha_2 + \beta_2 \mathrm{IVT}_2 \\
+  \mathrm{PD} & =  \alpha_3 + \beta_3 \mathrm{IVT}_3 \\  
+  \mathrm{PD} & =  \alpha_4 + \beta_4 \mathrm{IVT}_4 
+  \end{aligned}
+$$
+and similarly for $\mathrm{CV}$
+
+<!--
+### Approach 2
+Fit a multiple linear regression model
+$$
+  \begin{aligned}
+  \mathrm{PD} & =  \alpha + \beta_1 \mathrm{IVT}_1 + \beta_2 \mathrm{IVT}_2 + \beta_3 \mathrm{IVT}_3 + \beta_4 \mathrm{IVT}_4
+  \end{aligned}
+$$
+and similarly for $\mathrm{CV}$
+-->
+
+## Hypothesis
+
+$H_{PD}$: High power distance is correlated positively with implicit voice theories  
+$H_{CV}$: Collectivism is correlated positively with implicit voice theories  
+
+Relating these to the models, the null hypothesis are  
+$H_{PD0}$: $\beta_i = 0$ for all $i$  
+and similarly for $\mathrm{CV}$
+
+## Sample size
+
+Find sample size using Cohen, J. (1988). Statistical power analysis for the behavioral sciences (2nd ed.). Hillsdale,NJ.
+
+For this we need to know the "effect size" or "$R^2$", this is the amount of the variability explained in PD given the IVT variables. Cohen suggests values of 0.02, 0.15, and 0.35 represent small, medium, and large effect sizes.
+
+Key concepts in a sample size are
+
+Attribute    | Definition 
+------------ | ----------
+alpha        | false positive probability (Reject null when true). Set to 0.05
+power        | true negative probability (Reject null when false). Should be > 0.8
+effect size  | see above. 
+
+Find the power for a range of sample sizes and effect sizes. Note that these calculations are not making any multiplicity adjustments, so are technically only valid for doing only one test. However, they are reasonable for designing the study. 
+
+```{r, echo = FALSE}
+# Set variable for power calculaiton
+library(pwr)
+sample.size <- seq(10, 100, by = 1)
+# v = degrees of freedom for denominator = sample size - 1 - u
+effect.size <- c(0.02, 0.15, 0.35)
+
+alpha <- 0.05
+u <- 1 # degrees of freedom for numerator = number of preditor variables = 1
+```
+
+```{r, echo = FALSE}
+# Set up data frame
+power <- expand.grid(sample.size, effect.size)
+names(power) <- c("sample.size", "effect.size")
+power$power <- NA
+
+# Do calculations
+
+for(i in 1:nrow(power)){
+  out <- pwr.f2.test(
+  u = u, 
+  v = power$sample.size[i] - 1 - u, 
+  f2 = power$effect.size[i], 
+  sig.level = 0.05, 
+  power = NULL
+  )
+
+power$power[i] <- out$power
+  
+}
+
+power$effect.size <- factor(power$effect.size, levels = rev(effect.size))
+```
+
+```{r, echo = FALSE}
+library(ggplot2)
+by.ss <- 10 # how often to plot sample size ticks
+by.pw <- 0.1 # how often to plot power ticks
+range.ss <- range(pretty(power$sample.size))
+range.pw <- range(pretty(power$power))
+
+ggplot(power, aes(x = sample.size, y = power, colour = effect.size)) +
+  geom_line() +
+  geom_hline(yintercept = 0.8) + 
+  scale_x_continuous(breaks = seq(range.ss[1], range.ss[2], by = by.ss)) +
+  scale_y_continuous(breaks = seq(range.pw[1], range.pw[2], by = by.pw)) +
+  xlab("Sample size") +
+  ylab("Power") +
+  scale_colour_discrete(name = "Effect size")
+
+```
+
+---
+#### Session Info
+```{r sessionInfo, echo = FALSE}
+sessionInfo()
+```
+
