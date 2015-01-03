@@ -1,0 +1,120 @@
+---
+title: "Exploratory plots"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+- Report generated `r date()`
+
+```{r echo = FALSE, warning = FALSE}
+source(file.path("..", "_setup.R"))
+opts_chunk$set(warning = FALSE, error = FALSE, message = FALSE, echo = FALSE)
+
+data <- dget(file.path(gv$data, 'data2.dput'))
+labels <- attr(data, "labels")
+var.key <- c("Power.distance", "Resistance.to.change", "Core.self.evaluation", "Openness.to.change")
+var.dem <- c("Age", "Gender", "Education",  "Manager")
+```
+
+
+# Correlation of Constructive Voice Behaviour with other variables
+```{r corr_table, results = "asis"}
+digits <- 2
+
+long <-  melt(subset(data, select = c("ResponseID", "Constructive.voice.behaviour", var.key)),  id.vars = "ResponseID", variable.name = "var")
+
+corr <- ddply(long, .(var), function(x){
+  test <- cor.test(data$Constructive.voice.behaviour, x$value)
+  data.frame(
+    corr = test$estimate,
+    p.value = test$p.value,
+    low = test$conf.int[1],
+    upp = test$conf.int[2]
+    )
+})
+
+corr <- melt(subset(corr, subset = var != "Constructive.voice.behaviour"), 
+             measure.vars = c("corr", "p.value", "low", "upp"))
+
+corr$value <- formatC(corr$value, digits = digits, format = "g")
+corr.CI <- ddply(corr, .(var), function(x){
+  data.frame(variable = "CI",
+             value = paste0('(', subset(x, variable == "low")$value, ', ', subset(x, variable == "upp")$value, ')'))
+})
+
+corr <- rbind(subset(corr, variable %in% c("corr", "p.value")), corr.CI)
+corr <- dcast(corr, var ~ variable)
+
+kable(corr, align = c("l","r", "r", "r"))
+
+```
+
+# Relationship of variables with Constructive Voice Behaviour
+## Plots of Constructive Voice Behaviour
+### Hisogram of Constructive Voice Behaviour
+
+```{r}
+ggplot(data, aes(x = Constructive.voice.behaviour)) +
+  geom_histogram() +
+  xlab(labels["Constructive.voice.behaviour"])
+```
+
+### Density of Constructive Voice Behaviour
+
+```{r}
+ggplot(data, aes(x = Constructive.voice.behaviour)) +
+  geom_density() +
+  xlab(labels["Constructive.voice.behaviour"])
+```
+
+
+## Plots of key variables and Constructive Voice Behaviour
+
+```{r key vs Constructive.voice.behaviour, fig.width = 6, fig.height = 12}
+long.key <- melt(data, 
+                   id.vars = c("ResponseID", "Constructive.voice.behaviour"), 
+                   measure.vars = var.key, 
+                   variable.name = "var.key", value.name = "key")
+
+long.key$var.key <- labels[as.character(long.key$var.key)]
+long.key$var.key <- factor(long.key$var.key, levels = labels[var.key])
+
+ggplot(long.key, aes(x = key, y = Constructive.voice.behaviour)) +
+  facet_wrap(~ var.key, ncol = 1) +
+  geom_point() +
+   geom_smooth() +
+ylab(labels["Constructive.voice.behaviour"]) + xlab("")
+```
+
+## Plots of demographic variables and Constructive Voice Behaviour
+
+```{r Demo vs Constructive.voice.behaviour, fig.width = 6, fig.height = 4}
+long.dem <- melt(data, 
+                   id.vars = c("ResponseID", "Constructive.voice.behaviour"), 
+                   measure.vars = var.dem, 
+                   variable.name = "var.dem", value.name = "dem")
+
+long.dem$var.dem <- labels[as.character(long.dem$var.dem)]
+long.dem$var.dem <- factor(long.dem$var.dem, levels = labels[var.dem])
+
+for(dem in var.dem){
+
+p <- ggplot(data, aes_string(x = dem, y = "Constructive.voice.behaviour")) +
+  geom_violin() + 
+    geom_point(position = position_jitter(w = 0.2, h = 0)) +
+ylab(labels["Constructive.voice.behaviour"]) + xlab(labels[dem]) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+plot(p)
+}
+```
+
+***
+
+Session Information  
+```{r, echo = FALSE}
+sessionInfo()
+```
+

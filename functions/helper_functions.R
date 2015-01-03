@@ -95,6 +95,56 @@ ggplotRegression <- function (mod) {
 }
 
 #####################################################################
+ggplotCtsInteraction <- function (mod, num.levels = 4, modify.vals = NULL, alpha = 0.15, size = TRUE) {
+  # Levels of the modifing variable and pred var range
+  if(is.null(modify.vals)){
+    #prob <- seq(1/(num.levels+1),num.levels/(num.levels+1), length = num.levels)  #seq(0, 1, length = num.levels)
+    prob <- seq(0, 1, length = num.levels)
+    modify.vals <- quantile(mod$model[,3], prob = prob)
+  }
+  x.vals <- seq(min(mod$model[,2]), max(mod$model[,2]), length = 100)
+  
+  # Make prediction
+  line.data <- expand.grid(x.vals, modify.vals)
+  names(line.data) <- names(mod$model)[2:3]
+  
+  if(ncol(mod$model)-3 > 0){
+  base.val <- data.frame(matrix(NA, nrow = nrow(line.data), ncol = ncol(mod$model)-3,
+                                dimnames = list(NULL, names(mod$model[,4:ncol(mod$model)]))))
+
+  for(i in colnames(base.val)){
+    base.val[,i] <- mod$xlevels[[i]][1]   
+  }
+  line.data <- cbind(line.data, base.val)
+  }
+  
+  pred <- predict(mod, line.data, interval = "confidence", level = 0.8)
+  
+  # Add pred to lines data
+  line.data <- cbind(line.data, pred)
+  line.data[,2] <- as.factor(line.data[,2])
+  
+  # Make plot
+  p <- ggplot(mod$model, aes_string(x = names(mod$model)[2])) + 
+    geom_point(aes_string(y = names(mod$model)[1])) +
+    geom_path(aes_string(y = "fit", colour = names(mod$model)[3]), data = line.data, size = 1) +
+    geom_ribbon(aes_string(ymax = "upr", ymin = "lwr", fill = names(mod$model)[3]), 
+                alpha = alpha, data = line.data) +
+    xlab(labels[names(mod$model)[2]]) + ylab(labels[names(mod$model)[1]]) +
+    scale_colour_discrete(name = labels[names(mod$model)[3]]) +
+    guides(fill = FALSE) 
+ 
+  if(size){
+  p <- p + 
+  geom_point(aes_string(y = names(mod$model)[1], size = names(mod$model)[3])) +
+    scale_size_continuous(
+      name = labels[names(mod$model)[3]],
+      breaks = as.numeric(modify.vals))
+  }
+    
+  return(p)
+}
+#####################################################################
 
 # Multiple plot function
 #

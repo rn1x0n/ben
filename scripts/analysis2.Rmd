@@ -1,0 +1,231 @@
+---
+title: "Analysis"
+output:
+  html_document:
+    toc: true
+    number_sections: true
+---
+
+- Report generated `r date()`
+
+```{r echo = FALSE, warning = FALSE}
+
+source(file.path("..", "_setup.R"))
+opts_chunk$set(warning = FALSE, error = FALSE, message = FALSE, echo = FALSE)
+num.levels <- 4 # Number of levels for interaction plots
+modify.vals <- list() # Modify variable levels defauls
+modify.vals[["Power.distance"]] <- c(1,2,3,4,5,6)
+modify.vals[["Resistance.to.change"]] <- c(2,3,4,5,6)
+modify.vals[["Core.self.evaluation"]] <- c(3,4,5,6)
+modify.vals[["Openness.to.change"]] <- c(4,5,6,7,8,9)
+
+fig.width1 <- 4; fig.height1 <- 4
+fig.width2 <- 8; fig.height2 <- 6
+
+data <- dget(file.path(gv$data, 'data2.dput'))
+labels <- attr(data, "labels")
+var.key <- c("Power.distance", "Resistance.to.change", "Core.self.evaluation", "Openness.to.change")
+var.dem <- c("Age", "Gender", "Education",  "Manager")
+```
+
+# Linear models for Constructive Voice Behavior
+
+Assess the following dependent variables for Constructive Voice Behaviour, with and without adjustment for potential confounding with demographic varaibles.
+
+1. Power distance 
+2. Resistance to change 
+3. Core Self Evaluation 
+4. Openness to change 
+
+## Unadjusted regression
+
+### Key variables
+
+```{r key unadjusted regression, results = "asis"}
+mod <- list()
+for(i in 1:length(var.key)){
+  formula <- as.formula(paste("Constructive.voice.behaviour ~ ", var.key[i]))
+  mod[[var.key[i]]] <- lm(formula, data = data)
+  
+  #kable(summary(mod[[var.key[i]]]))
+  
+  print(xtable(summary(mod[[var.key[i]]])),
+      type = "html")
+  
+  cat("<br>")
+  
+}
+
+```
+
+```{r, fig.width = fig.width1, fig.height = fig.height1}
+for(i in 1:length(mod)){
+print(ggplotRegression(mod[[i]]))
+}
+```
+
+### Demographic variables
+
+```{r demographics unadjusted regression, results = "asis"}
+mod <- formula <- list()
+for(i in 1:length(var.dem)){
+  formula[[var.dem[i]]] <- as.formula(paste("Constructive.voice.behaviour ~ ", var.dem[i]))
+  mod[[var.dem[i]]] <- lm(formula[[var.dem[i]]], data = data)
+  
+  print(xtable(summary(mod[[var.dem[i]]])),
+      type = "html")
+  
+  cat("<br>")
+}
+
+```
+
+```{r, fig.width = fig.width1, fig.height = fig.height1}
+for(i in 1:length(mod)){
+  line.data <- data.frame(x = 1:length(unlist(mod[[i]]$xlevels)), 
+                          y = mod[[i]]$coeff + mod[[i]]$coeff[1])
+  line.data$y[1] <- line.data$y[1] - mod[[i]]$coeff[1]
+  names(line.data) <- c(names(mod[[i]]$model)[2], "Constructive.voice.behaviour")
+  
+   p <- ggplot(mod[[i]]$model, aes_string(x = names(mod[[i]]$model)[2], y = names(mod[[i]]$model)[1])) + 
+    geom_point(position = position_jitter(w = 0.05, h = 0)) +
+     geom_path(data = line.data, col = "red", size = 1) +
+    xlab(labels[names(mod[[i]]$model)[2]]) + ylab(labels[names(mod[[i]]$model)[1]]) +
+     theme(axis.text.x = element_text(angle = 30, hjust = 1))
+ 
+print(p)
+}
+```
+
+
+## Adjustment for demographic varaibles
+### Key variables with main effects for demographic varaibles
+
+This adjusts for possible confounding by the demographic variables.
+
+```{r key adjusted regression with main effects, results = "asis"}
+mod <- list()
+
+for(i in 1:length(var.key)){
+  formula <- as.formula(paste("Constructive.voice.behaviour ~ ", var.key[i], 
+                              "+", paste(var.dem, collapse = " + ")
+                              ))
+  
+  mod[[var.key[i]]] <- lm(formula, data = data)
+   print(xtable(summary(mod[[var.key[i]]])),
+      type = "html")
+ 
+  cat("<br>")
+}
+
+```
+
+```{r, fig.width = fig.width1, fig.height = fig.height1}
+for(i in 1:length(mod)){
+print(ggplotRegression(mod[[i]]))
+}
+```
+
+## Multivariate regression
+
+### Key variables multivariate regression
+
+```{r key multivariate regression, results = "asis"}
+
+  formula <- as.formula(paste("Constructive.voice.behaviour ~ ", 
+                              paste(var.key, collapse = " + ")))
+  mod <- lm(formula, data = data)
+  
+  print(xtable(summary(mod)),
+      type = "html")
+  
+  cat("<br>")
+
+```
+
+### Demographics multivaraite regression
+```{r demo multivariate regression, results = "asis"}
+
+  formula <- as.formula(paste("Constructive.voice.behaviour ~ ", 
+                              paste(var.dem, collapse = " + ")))
+  mod <- lm(formula, data = data)
+  
+  print(xtable(summary(mod)),
+      type = "html")
+  
+  cat("<br>")
+
+```
+
+# Modifiers for the effect of key variables on Constructive Voice Behavior
+
+Assess the following modifers for the effect of key variables on Constructive Voice Behaviour, with and without adjustment for potential confounding with demographic varaibles.
+
+1. Resistance to change moderates the effect of power distance on constructive voice behaviour
+
+2. Core Self Evaluation moderates the effect of power distance on constructive voice behaviour  
+
+3. Openness to change moderates the effect of power distance on constructive voice behaviour  
+
+4. Core Self Evaluation moderates the effect of resistance to change on constructive voice behaviour 
+
+5. Openness to change moderates the effect of resistance to change on constructive voice behaviour 
+
+
+```{r}
+mod <- mod.adj <- formula <- modify <- titles <- list()
+
+formula[[1]] <- "Constructive.voice.behaviour ~ Power.distance*Resistance.to.change"
+modify[[1]] <- modify.vals[["Resistance.to.change"]]
+titles[[1]] <- "Resistance to change moderates the effect of power distance on constructive voice behaviour"
+
+formula[[2]] <- "Constructive.voice.behaviour ~ Power.distance*Core.self.evaluation"
+modify[[2]] <- modify.vals[["Core.self.evaluation"]]
+titles[[2]] <- "Core Self Evaluation moderates the effect of power distance on constructive voice behaviour"  
+
+formula[[3]] <- "Constructive.voice.behaviour ~ Power.distance*Openness.to.change"
+modify[[3]] <- modify.vals[["Openness.to.change"]]
+titles[[3]] <- "Openness to change moderates the effect of power distance on constructive voice behaviour"  
+
+formula[[4]] <- "Constructive.voice.behaviour ~ Resistance.to.change*Core.self.evaluation"
+modify[[4]] <- modify.vals[["Core.self.evaluation"]]
+titles[[4]] <- "Core Self Evaluation moderates the effect of resistance to change on constructive voice behaviour" 
+
+formula[[5]] <- "Constructive.voice.behaviour ~ Resistance.to.change*Openness.to.change"
+modify[[5]] <- modify.vals[["Openness.to.change"]]
+titles[[5]] <- "Openness to change moderates the effect of resistance to change on constructive voice behaviour" 
+
+formula.adj <- lapply(formula, function(x){paste(x, "+", paste(var.dem, collapse = " + "))})
+
+```
+
+```{r modifier unadjusted regression, results = "asis", fig.width = fig.width2, fig.height = fig.height2}
+for(i in 1:length(formula)){
+  
+  cat("<h2>", titles[[i]], "</h2>")
+  
+cat("<h3> Unadjusted </h3>")
+mod[[i]] <- lm(as.formula(formula[[i]]), data = data)
+print(xtable(summary(mod[[i]])), type = "html")
+cat("R^2 = ", summary(mod[[i]])$r.squared, "\n", sep = "")
+cat("<br>")
+print(ggplotCtsInteraction(mod[[i]], modify.vals = modify[[i]]))
+
+
+cat("<h3> Adjusted for demographic variables, plotted at reference level </h3>")
+mod.adj[[i]] <- lm(as.formula(formula.adj[[i]]), data = data)
+print(xtable(summary(mod.adj[[i]])), type = "html")
+cat("R^2 = ", summary(mod.adj[[i]])$r.squared, "\n", sep = "")
+cat("<br>")
+print(ggplotCtsInteraction(mod.adj[[i]], modify.vals = modify[[i]]))
+cat("<br>")
+}
+```
+
+
+***
+
+Session Information  
+```{r, echo = FALSE}
+sessionInfo()
+```
