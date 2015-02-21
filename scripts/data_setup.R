@@ -69,3 +69,7 @@ attr(data0, "labels") <- labels
 
 # output data
 dput(data0, file.path(gv$data, 'data.dput'))
+
+
+
+

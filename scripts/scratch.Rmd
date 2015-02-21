@@ -58,3 +58,41 @@ multiplot(p1, p2, p3)
 
 ```
 
+```{r}
+temp <- subset(data, select = c(
+Core.self.evaluation, 
+Resistance.to.change,
+Constructive.voice.behaviour))
+
+ggpairs(temp)
+mod <- lm(Constructive.voice.behaviour ~ Core.self.evaluation+Resistance.to.change, data = data)
+summary(mod)
+
+mod1 <- lm(Constructive.Voice.Behavior ~ Don.t.embarass.boss.publicly, data = data)
+summary(mod1)
+p.mod1 <- ggplotRegression(mod1)
+
+mod2 <- lm(Constructive.Voice.Behavior ~ Resistance.to.change, data = data)
+summary(mod2)
+p.mod2 <- ggplotRegression(mod2)
+
+mod3 <- lm(Don.t.embarass.boss.publicly ~ Resistance.to.change, data = data)
+summary(mod3)
+p.mod3 <- ggplotRegression(mod3)
+
+multiplot(p.mod1, p.mod2, p.mod3)
+
+p1 <- ggplot(temp, aes(x = Core.self.evaluation, y = Constructive.voice.behaviour)) +
+  geom_point(aes(size = Resistance.to.change))#, position = "jitter")
+
+p2 <- ggplot(temp, aes(x = Resistance.to.change, y = Constructive.voice.behaviour)) +
+  geom_point(aes(size = Core.self.evaluation))#, position = "jitter")
+
+p3 <- ggplot(temp, aes(x = Resistance.to.change, y = Core.self.evaluation)) +
+  geom_point(aes(size = Constructive.voice.behaviour))#, position = "jitter")
+
+multiplot(p1, p2, p3)
+
+
+```
+

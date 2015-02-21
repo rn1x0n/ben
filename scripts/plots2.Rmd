@@ -111,6 +111,19 @@ plot(p)
 }
 ```
 
+## Plots of Resistance to change and Core self evaluation
+
+```{r fig.width = 6, fig.height = 4}
+
+p <- ggplot(data, aes(x = Resistance.to.change, y = Core.self.evaluation)) +
+   geom_point() +
+  geom_smooth() +
+ylab(labels["Core.self.evaluation"]) + xlab(labels["Resistance.to.change"]) 
+ 
+plot(p)
+
+```
+
 ***
 
 Session Information  

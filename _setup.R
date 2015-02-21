@@ -1,6 +1,6 @@
 rm(list = ls())
 # Change this path to the location of this file
-root <- "/Users/Richard/Documents/R/Ben"
+root <- "/Users/Richard/Documents/R/ben"
 
 # Set up global variables
 gv <- list()
@@ -10,7 +10,7 @@ gv$functions <- file.path(gv$root, "functions")
 gv$scripts <- file.path(gv$root, "scripts")
 
 # Install packages if needed then load
-pkg.needed <- c("ggplot2", "GGally",
+pkg.needed <- c("psych", "ggplot2", "GGally",
                 "grid",
                 "reshape2",
                 "plyr",

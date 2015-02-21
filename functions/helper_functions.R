@@ -95,14 +95,17 @@ ggplotRegression <- function (mod) {
 }
 
 #####################################################################
-ggplotCtsInteraction <- function (mod, num.levels = 4, modify.vals = NULL, alpha = 0.15, size = TRUE) {
+ggplotCtsInteraction <- function (mod, num.levels = 4, v.line = NULL, modify.vals = NULL, alpha = 0.15, size = TRUE, SDplot =  FALSE) {
   # Levels of the modifing variable and pred var range
   if(is.null(modify.vals)){
     #prob <- seq(1/(num.levels+1),num.levels/(num.levels+1), length = num.levels)  #seq(0, 1, length = num.levels)
     prob <- seq(0, 1, length = num.levels)
     modify.vals <- quantile(mod$model[,3], prob = prob)
   }
+  
+  #if(is.null(x.vals)){
   x.vals <- seq(min(mod$model[,2]), max(mod$model[,2]), length = 100)
+ # }
   
   # Make prediction
   line.data <- expand.grid(x.vals, modify.vals)
@@ -122,26 +125,43 @@ ggplotCtsInteraction <- function (mod, num.levels = 4, modify.vals = NULL, alpha
   
   # Add pred to lines data
   line.data <- cbind(line.data, pred)
-  line.data[,2] <- as.factor(line.data[,2])
+  if(SDplot){
+    line.data[,2] <- factor(line.data[,2], levels = modify.vals, labels = c("+1 SD", "-1 SD"))  
+  } else {
+    line.data[,2] <- as.factor(line.data[,2])   
+  }
   
   # Make plot
   p <- ggplot(mod$model, aes_string(x = names(mod$model)[2])) + 
-    geom_point(aes_string(y = names(mod$model)[1])) +
-    geom_path(aes_string(y = "fit", colour = names(mod$model)[3]), data = line.data, size = 1) +
+    theme_bw() +
+    geom_point(aes_string(y = names(mod$model)[1]), colour = grey(0.8)) 
+ 
+ if(size){
+    p <- p + 
+      geom_point(aes_string(y = names(mod$model)[1], size = names(mod$model)[3]), colour = grey(0.8)) + 
+      scale_size_continuous(name = labels[names(mod$model)[3]])
+  }
+  
+ if(!is.null(v.line)){
+    p <- p + geom_vline(xintercept = v.line) 
+ }
+ 
+ p <- p +
+   geom_path(aes_string(y = "fit", colour = names(mod$model)[3]), data = line.data, size = 1.5) +
     geom_ribbon(aes_string(ymax = "upr", ymin = "lwr", fill = names(mod$model)[3]), 
                 alpha = alpha, data = line.data) +
-    xlab(labels[names(mod$model)[2]]) + ylab(labels[names(mod$model)[1]]) +
+   
+   xlab(labels[names(mod$model)[2]]) + ylab(labels[names(mod$model)[1]]) +
     scale_colour_discrete(name = labels[names(mod$model)[3]]) +
     guides(fill = FALSE) 
  
-  if(size){
-  p <- p + 
-  geom_point(aes_string(y = names(mod$model)[1], size = names(mod$model)[3])) +
-    scale_size_continuous(
-      name = labels[names(mod$model)[3]],
-      breaks = as.numeric(modify.vals))
+  
+  if(!SDplot){
+    p <- p +
+    scale_size_continuous(breaks = as.numeric(modify.vals)) +
+    scale_colour_discrete(guide = guide_legend(keywidth=3))     
   }
-    
+  
   return(p)
 }
 #####################################################################
@@ -190,4 +210,31 @@ multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
                                       layout.pos.col = matchidx$col))
     }
   }
+}
+
+#####################################################################
+find.slope <- function(
+  mod,
+  var,
+  inter.val # value of the interaction term
+  ){
+  
+  s <- summary(mod)
+  
+  inter.term <- grep(paste0(var,':'), row.names(s$coeff), value = TRUE)
+  #inter.term <- strsplit(inter.term, ':')[[1]][2]
+  
+  beta.terms <- c(s$coeff[var, "Estimate"],  inter.val * s$coeff[inter.term, "Estimate"]) 
+  beta <- sum(beta.terms)
+  
+  var.mat <- s$cov.unscaled[c(var, inter.term), c(var, inter.term)]
+  var.beta <- t(beta.terms) %*% var.mat %*% beta.terms
+  
+  p.value <- 2*(1-pnorm(abs(beta), sd = sqrt(var.beta)))
+  
+  return(list(
+    beta = formatC(beta, format = "f", digits = 3),
+    se.beta =  formatC(sqrt(var.beta), format = "f", digits = 3),
+    p.value =  formatC(p.value, format = "e", digits = 3)
+    ))
 }
